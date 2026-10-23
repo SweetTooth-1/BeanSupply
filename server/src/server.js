@@ -1,5 +1,6 @@
 const express = require("express");
 const productsRouter = require("./routes/product");
+const inventoryRouter = require("./routes/inventory");
 
 const app = express();
 
@@ -10,6 +11,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/products", productsRouter);
+app.use("/api/inventory", inventoryRouter);
 
 app.listen(PORT, () => {
     console.log(`BeanSupply server running on port ${PORT}`);
