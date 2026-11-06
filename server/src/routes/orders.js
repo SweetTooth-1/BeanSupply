@@ -43,7 +43,9 @@ if (!order) {
 }
 
 if (order.status !== "Pending") {
-    throw new Error("Only pending orders can be confirmed");
+    const error = new Error("Only pending orders can be confirmed");
+    error.statusCode = 409;
+    throw error;
 }
 
 //Retrieve the products in that order
@@ -82,8 +84,12 @@ for (const item of items) {
     const requiredStock = Number(item.quantity);
 
     if (availableStock < requiredStock) {
-        throw new Error(`Insufficient stock for product ${item.product_id}`);
-    }
+    const error = new Error(
+        `Insufficient stock for product ${item.product_id}`
+    );
+    error.statusCode = 409;
+    throw error;
+}
 }
 
 //deduct the stock from inventory
@@ -119,9 +125,11 @@ res.json({
 
     console.error("Order confirmation failed:", error);
 
-    res.status(500).json({
-        error: error.message
-    });
+    const statusCode = error.statusCode || 500;
+
+res.status(statusCode).json({
+    error: error.message
+});
 
 } finally {
     client.release();
