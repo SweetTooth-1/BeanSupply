@@ -19,6 +19,132 @@ JOIN customers
     res.json(result.rows);
 });
 
+router.post("/", async (req, res) => {
+    const { customerId, items } = req.body;
+    if (!Number.isInteger(Number(customerId)) || Number(customerId) <= 0) {
+    return res.status(400).json({
+        error: "Invalid customer ID"
+    });
+}
+
+if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({
+        error: "Order must contain at least one product"
+    });
+}
+
+for (const item of items) {
+    if (
+        !item ||
+        !Number.isInteger(Number(item.productId)) ||
+        Number(item.productId) <= 0 ||
+        !Number.isFinite(Number(item.quantity)) ||
+        Number(item.quantity) <= 0
+    ) {
+        return res.status(400).json({
+            error: "Invalid product ID or quantity"
+        });
+    }
+}
+// Start a transaction
+let client;
+let transactionStarted = false;
+
+try {
+    client = await pool.connect();
+
+    await client.query("BEGIN");
+    transactionStarted = true;
+
+    const productIds = items.map(item => Number(item.productId));
+
+const pricingResult = await client.query(
+    `SELECT product_id, price
+     FROM customer_prices
+     WHERE customer_id = $1
+     AND product_id = ANY($2::int[])`,
+    [Number(customerId), productIds]
+);
+const pricedItems = [];
+let totalAmount = 0;
+
+for (const item of items) {
+    const productId = Number(item.productId);
+    const quantity = Number(item.quantity);
+
+    const priceRow = pricingResult.rows.find(
+        row => Number(row.product_id) === productId
+    );
+
+    if (!priceRow) {
+        const error = new Error(
+            `No negotiated price found for product ${productId}`
+        );
+        error.statusCode = 409;
+        throw error;
+    }
+
+    const unitPrice = Number(priceRow.price);
+
+    pricedItems.push({
+        productId,
+        quantity,
+        unitPrice
+    });
+
+    totalAmount += quantity * unitPrice;
+}
+
+totalAmount = Number(totalAmount.toFixed(2));
+const orderResult = await client.query(
+    `INSERT INTO orders (customer_id, status, total_amount)
+     VALUES ($1, $2, $3)
+     RETURNING id`,
+    [Number(customerId), "Pending", totalAmount]
+);
+
+const orderId = orderResult.rows[0].id;
+for (const item of pricedItems) {
+    await client.query(
+        `INSERT INTO order_items
+         (order_id, product_id, quantity, unit_price)
+         VALUES ($1, $2, $3, $4)`,
+        [
+            orderId,
+            item.productId,
+            item.quantity,
+            item.unitPrice
+        ]
+    );
+}
+await client.query("COMMIT");
+transactionStarted = false;
+
+res.status(201).json({
+    message: "Order placed successfully",
+    orderId,
+    status: "Pending",
+    totalAmount
+});
+
+} catch (error) {
+    if (client && transactionStarted) {
+        await client.query("ROLLBACK");
+    }
+
+    console.error("Order creation failed:", error);
+
+    res.status(error.statusCode || 500).json({
+        error: error.message
+    });
+
+} finally {
+    if (client) {
+        client.release();
+    }
+}
+});
+
 //dedicated DB connection
 router.patch("/:orderId/confirm", async (req, res) => {
     const client = await pool.connect();

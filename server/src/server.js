@@ -7,6 +7,7 @@ const orderItemsRouter = require("./routes/order_items");
 
 
 const app = express();
+app.use(express.json());
 
 const PORT = 3000;
 
