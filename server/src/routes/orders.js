@@ -19,6 +19,24 @@ JOIN customers
     res.json(result.rows);
 });
 
+router.get("/customer/:customerId", async (req, res) => {
+    const customerId = req.params.customerId;
+
+    const result = await pool.query(
+        `SELECT
+            id,
+            order_date,
+            status,
+            total_amount
+         FROM orders
+         WHERE customer_id = $1
+         ORDER BY order_date DESC`,
+        [customerId]
+    );
+
+    res.json(result.rows);
+});
+
 router.post("/", async (req, res) => {
     const { customerId, items } = req.body;
     if (!Number.isInteger(Number(customerId)) || Number(customerId) <= 0) {
