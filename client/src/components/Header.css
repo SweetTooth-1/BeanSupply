@@ -1,0 +1,40 @@
+.site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 6%;
+    background-color: #f5eee3;
+}
+
+.brand {
+    font-size: 26px;
+    font-weight: 700;
+    color: #3b2418;
+}
+
+
+.navigation {
+    display: flex;
+    gap: 32px;
+}
+
+.navigation a {
+    text-decoration: none;
+    color: #594334;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.navigation a:hover {
+    color: #b87942;
+}
+
+.cart-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    background-color: #3b2418;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}

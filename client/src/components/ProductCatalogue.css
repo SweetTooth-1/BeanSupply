@@ -1,0 +1,15 @@
+#catalogue {
+    padding: 80px 8%;
+}
+
+#catalogue h2 {
+    margin: 0 0 36px;
+    font-size: 36px;
+    color: #3b2418;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+}
